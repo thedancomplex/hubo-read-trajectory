@@ -167,36 +167,20 @@ int huboLoop() {
 // ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
 
-	char* fileName = "valve0.traj";
-//	runTraj(tmp, &H_ref_filter, &t);
-	int i = 0;
-
- 	char str[1000];
-	FILE *fp;		// file pointer
-	fp = fopen("hubo.traj","r");
-	if(!fp) {
-		printf("No Trajectory File!!!\n");
-		return 1;  // exit if not file
-	}
-
-	printf("Reading %s\n",fileName);
-        while(fgets(str,sizeof(str),fp) != NULL) {
-		i = i+1;
-                // wait until next shot
-                clock_nanosleep(0,TIMER_ABSTIME,&t, NULL);
-
-		int len = strlen(str)-1;
-		if(str[len] == "\n") {
-			str[len] = 0;
-		}
-
-		getArg(str, &H_ref_filter); 	
-
-        	ach_put( &chan_hubo_ref_filter, &H_ref_filter, sizeof(H_ref_filter));
-		//printf("Ref r = %s\n",ach_result_to_string(r));
-                t.tv_nsec+=interval;
-                tsnorm(&t);
-	}
+//	char* fileName = "valve0.traj";
+//	runTraj(fileName, &H_ref_filter, &t);
+	runTraj("valve0.traj", &H_ref_filter, &t);
+	runTraj("valve1.traj", &H_ref_filter, &t);
+	runTraj("valve2.traj", &H_ref_filter, &t);
+	runTraj("valve1.traj", &H_ref_filter, &t);
+	runTraj("valve2.traj", &H_ref_filter, &t);
+	runTraj("valve1.traj", &H_ref_filter, &t);
+	runTraj("valve2.traj", &H_ref_filter, &t);
+	runTraj("valve1.traj", &H_ref_filter, &t);
+	runTraj("valve2.traj", &H_ref_filter, &t);
+	runTraj("valve1.traj", &H_ref_filter, &t);
+	runTraj("valve2.traj", &H_ref_filter, &t);
+	runTraj("valve3.traj", &H_ref_filter, &t);
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
@@ -213,7 +197,7 @@ int interval = 10000000; // 100 hz (0.01 sec)
 
  	char str[1000];
 	FILE *fp;		// file pointer
-	fp = fopen("valve0.traj","r");
+	fp = fopen(s,"r");
 	if(!fp) {
 		printf("No Trajectory File!!!\n");
 		return 1;  // exit if not file
@@ -239,7 +223,7 @@ int interval = 10000000; // 100 hz (0.01 sec)
 // ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
 
-        	ach_put( &chan_hubo_ref_filter, r, sizeof(r));
+        	ach_put( &chan_hubo_ref_filter, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
                 t->tv_nsec+=interval;
                 tsnorm(t);
