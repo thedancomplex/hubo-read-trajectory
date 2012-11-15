@@ -155,7 +155,9 @@ int huboLoop() {
         struct timespec t;
 	//int interval = 1000000000; // 1hz (1.0 sec)
 	//int interval = 500000000; // 2hz (0.5 sec)
-	int interval = 10000000; // 100 hz (0.01 sec)
+	int interval =   40000000; // 25 hz (0.04 sec)
+	//int interval = 20000000; // 50 hz (0.02 sec)
+	//int interval = 10000000; // 100 hz (0.01 sec)
 	//int interval = 5000000; // 200 hz (0.005 sec)
 	//int interval = 2000000; // 500 hz (0.002 sec)
 
@@ -205,8 +207,8 @@ int interval = 10000000; // 100 hz (0.01 sec)
 
 	printf("Reading %s\n",s);
         while(fgets(str,sizeof(str),fp) != NULL) {
-		printf("i = %d\n",i);
-		i = i+1;
+	//	printf("i = %d\n",i);
+	//	i = i+1;
                 // wait until next shot
                 clock_nanosleep(0,TIMER_ABSTIME,t, NULL);
 
@@ -222,6 +224,14 @@ int interval = 10000000; // 100 hz (0.01 sec)
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
+
+		// Cheeting No more RAP or LAP
+		r->ref[RHP] = 0.0;
+		r->ref[LHP] = 0.0;
+		r->ref[RAP] = 0.0;
+		r->ref[LAP] = 0.0;
+		r->ref[RKN] = 0.0;
+		r->ref[LKN] = 0.0;
 
         	ach_put( &chan_hubo_ref_filter, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
