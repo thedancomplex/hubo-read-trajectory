@@ -373,6 +373,9 @@ int main(int argc, char **argv) {
 			printf("\t\t\t\t\t200\n");
 			printf("\t\t\t\t\t500\n");
 			printf("\n");
+			printf("File format (Each Column)\n");
+			printf("\tRHY RHR RHP RKN RAP RAR LHY LHR LHP LKN LAP LAR RSP RSR RSY REB RWY RWR RWP LSP LSR LSY LEB LWY LWR LWP NKY NK1 NK2 WST RF1 RF2 RF3 RF4 RF5 LF1 LF2 LF3 LF4 LF5\n");
+			printf("\n");
 			return 0;
 		}
 		i++;
