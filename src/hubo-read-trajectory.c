@@ -90,6 +90,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Timing info
 #define NSEC_PER_SEC    1000000000
 
+char* fileName = "";
+//int interval = 1000000000; // 1hz (1.0 sec)
+//int interval = 500000000; // 2hz (0.5 sec)
+int interval =   40000000; // 25 hz (0.04 sec)
+//int interval = 20000000; // 50 hz (0.02 sec)
+//int interval = 10000000; // 100 hz (0.01 sec)
+//int interval = 5000000; // 200 hz (0.005 sec)
+//int interval = 2000000; // 500 hz (0.002 sec)
 
 struct timeb {
         time_t   time;
@@ -153,13 +161,6 @@ int huboLoop() {
 
         // time info
         struct timespec t;
-	//int interval = 1000000000; // 1hz (1.0 sec)
-	//int interval = 500000000; // 2hz (0.5 sec)
-	int interval =   40000000; // 25 hz (0.04 sec)
-	//int interval = 20000000; // 50 hz (0.02 sec)
-	//int interval = 10000000; // 100 hz (0.01 sec)
-	//int interval = 5000000; // 200 hz (0.005 sec)
-	//int interval = 2000000; // 500 hz (0.002 sec)
 
 
 	/* Sampling Period */
@@ -170,8 +171,12 @@ int huboLoop() {
 // ------------------------------------------------------------------------------
 
 //	char* fileName = "valve0.traj";
-//	runTraj(fileName, &H_ref_filter, &t);
-	runTraj("ybTest1.traj",&H_ref_filter, &t);
+
+	runTraj(fileName, &H_ref_filter, &t);
+
+
+//	runTraj("ybTest1.traj",&H_ref_filter, &t);
+
 //	runTraj("valve0.traj", &H_ref_filter, &t);
 //	runTraj("valve1.traj", &H_ref_filter, &t);
 //	runTraj("valve2.traj", &H_ref_filter, &t);
@@ -196,7 +201,7 @@ int huboLoop() {
 
 int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 	int i = 0;
-int interval = 10000000; // 100 hz (0.01 sec)
+// int interval = 10000000; // 100 hz (0.01 sec)
 
  	char str[1000];
 	FILE *fp;		// file pointer
@@ -206,7 +211,7 @@ int interval = 10000000; // 100 hz (0.01 sec)
 		return 1;  // exit if not file
 	}
 
-	printf("Reading %s\n",s);
+//	printf("Reading %s\n",s);
         while(fgets(str,sizeof(str),fp) != NULL) {
 	//	printf("i = %d\n",i);
 	//	i = i+1;
@@ -316,14 +321,70 @@ int main(int argc, char **argv) {
         int vflag = 0;
         int c;
 
+
         int i = 1;
         while(argc > i) {
-                if(strcmp(argv[i], "-d") == 0) {
+                if(strcmp(argv[i], "-d") == 0) { // debug
                         debug = 1;
                 }
-                i++;
+                if(strcmp(argv[i], "-n") == 0) {
+			if( argc > (i+1)) {
+	                        fileName = argv[i+1];
+				printf("Trejectory file changed\n");
+			}
+			else {
+				printf("ERROR: File name not changed\n");
+			}
+                }
+		if(strcmp(argv[i], "-f") == 0) {
+			int j = i+1;
+			if( argc > (j)) {
+				if(strcmp(argv[j],      "100") == 0) { interval = 10000000; /* 100 hz (0.01 sec) */ }
+				else if(strcmp(argv[j], "50") == 0)  { interval = 20000000; /* 50 hz (0.02 sec)  */ }
+				else if(strcmp(argv[j], "25") == 0)  { interval = 40000000; /* 25 hz (0.04 sec)  */ }
+				else if(strcmp(argv[j], "10") == 0)  { interval = 100000000; /* 25 hz (0.04 sec)  */}
+				else if(strcmp(argv[j], "200") == 0) { interval = 5000000;  /* 200 hz (0.005 sec)*/ }
+				else if(strcmp(argv[j], "500") == 0) { interval = 2000000;  /* 500 hz (0.002 sec)*/ }
+				else { printf("ERROR: Frequency not changed\n"); }
+			}
+			else {
+				printf("ERROR: Frequency not changed\n");
+			}
+		}
+		if(strcmp(argv[i], "-h") == 0) {
+                	printf("------------------------------------------\n");
+                	printf("-----------hubo-read-trajectory-----------\n");
+                	printf("------------------------------------------\n");
+			printf("\n");
+			printf("Usage: ./hubo-read-trajectory -f fileName.traj\n");
+			printf("\tOptions:\n");
+			printf("\t\t-h   help menu\n");
+			printf("\t\t-n   change trajectory\n");
+			printf("\t\t\t\tdefault: no file\n");
+			printf("\t\t\t\tatguements: filename\n");
+			printf("\t\t-f   change frequency\n");
+			printf("\t\t\tdefault: 25hz\n");
+			printf("\t\t\tatguements: frequency\n");
+			printf("\t\t\t\toptions (hz):\n");
+			printf("\t\t\t\t\t10\n");
+			printf("\t\t\t\t\t25\n");
+			printf("\t\t\t\t\t50\n");
+			printf("\t\t\t\t\t100\n");
+			printf("\t\t\t\t\t200\n");
+			printf("\t\t\t\t\t500\n");
+			printf("\n");
+			return 0;
+		}
+		i++;
         }
+	
 
+	printf("\n");
+	printf("-----------------------------\n");
+	printf("Using file: %s \n",fileName);
+	printf("Sampling frequency %f\n", 1/((double)interval/(double)NSEC_PER_SEC));
+	printf("-----------------------------\n");
+	printf("\n");
         /* RT */
         struct sched_param param;
         /* Declare ourself as a real time task */
@@ -353,7 +414,7 @@ int main(int argc, char **argv) {
 
  
 	huboLoop();
-        pause();
+//        pause();
         return 0;
 
 }
