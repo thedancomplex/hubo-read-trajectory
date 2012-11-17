@@ -171,18 +171,19 @@ int huboLoop() {
 
 //	char* fileName = "valve0.traj";
 //	runTraj(fileName, &H_ref_filter, &t);
-	runTraj("valve0.traj", &H_ref_filter, &t);
-	runTraj("valve1.traj", &H_ref_filter, &t);
-	runTraj("valve2.traj", &H_ref_filter, &t);
-	runTraj("valve1.traj", &H_ref_filter, &t);
-	runTraj("valve2.traj", &H_ref_filter, &t);
-	runTraj("valve1.traj", &H_ref_filter, &t);
-	runTraj("valve2.traj", &H_ref_filter, &t);
-	runTraj("valve1.traj", &H_ref_filter, &t);
-	runTraj("valve2.traj", &H_ref_filter, &t);
-	runTraj("valve1.traj", &H_ref_filter, &t);
-	runTraj("valve2.traj", &H_ref_filter, &t);
-	runTraj("valve3.traj", &H_ref_filter, &t);
+	runTraj("ybTest1.traj",&H_ref_filter, &t);
+//	runTraj("valve0.traj", &H_ref_filter, &t);
+//	runTraj("valve1.traj", &H_ref_filter, &t);
+//	runTraj("valve2.traj", &H_ref_filter, &t);
+//	runTraj("valve1.traj", &H_ref_filter, &t);
+//	runTraj("valve2.traj", &H_ref_filter, &t);
+//	runTraj("valve1.traj", &H_ref_filter, &t);
+//	runTraj("valve2.traj", &H_ref_filter, &t);
+//	runTraj("valve1.traj", &H_ref_filter, &t);
+//	runTraj("valve2.traj", &H_ref_filter, &t);
+//	runTraj("valve1.traj", &H_ref_filter, &t);
+//	runTraj("valve2.traj", &H_ref_filter, &t);
+//	runTraj("valve3.traj", &H_ref_filter, &t);
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
@@ -226,12 +227,12 @@ int interval = 10000000; // 100 hz (0.01 sec)
 // ------------------------------------------------------------------------------
 
 		// Cheeting No more RAP or LAP
-		r->ref[RHP] = 0.0;
-		r->ref[LHP] = 0.0;
-		r->ref[RAP] = 0.0;
-		r->ref[LAP] = 0.0;
-		r->ref[RKN] = 0.0;
-		r->ref[LKN] = 0.0;
+//		r->ref[RHP] = 0.0;
+//		r->ref[LHP] = 0.0;
+//		r->ref[RAP] = 0.0;
+//		r->ref[LAP] = 0.0;
+//		r->ref[RKN] = 0.0;
+//		r->ref[LKN] = 0.0;
 
         	ach_put( &chan_hubo_ref_filter, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
