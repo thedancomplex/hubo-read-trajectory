@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
                 	printf("-----------hubo-read-trajectory-----------\n");
                 	printf("------------------------------------------\n");
 			printf("\n");
-			printf("Usage: ./hubo-read-trajectory -f fileName.traj\n");
+			printf("Usage: ./hubo-read-trajectory -f 100 -n fileName.traj\n");
 			printf("\tOptions:\n");
 			printf("\t\t-h   help menu\n");
 			printf("\t\t-n   change trajectory\n");
