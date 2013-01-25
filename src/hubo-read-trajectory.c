@@ -46,7 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/mman.h>
 
 // for hubo
-#include "../../hubo-ach/include/hubo.h"
+#include "hubo.h"
 
 // for ach
 #include <errno.h>
@@ -133,31 +133,16 @@ int huboLoop() {
 	double newRef[2] = {1.0, 0.0};
         // get initial values for hubo
         struct hubo_ref H_ref;
-        struct hubo_ref H_ref_filter;
-	struct hubo_ref H_ref_filter_buff;
-	struct hubo_state H_state;
 	memset( &H_ref,   0, sizeof(H_ref));
-	memset( &H_ref_filter,   0, sizeof(H_ref_filter));
-	memset( &H_ref_filter_buff,   0, sizeof(H_ref_filter_buff));
 
         size_t fs;
-        //int r = ach_get( &chan_hubo_ref, &H, sizeof(H), &fs, NULL, ACH_O_LAST );
-        //assert( sizeof(H) == fs );
-	int r = ach_get( &chan_hubo_ref, &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
+	int r = ach_get( &chan_hubo_ref, &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_COPY );
 	if(ACH_OK != r) {
 		if(hubo_debug) {
                        	printf("Ref ini r = %s\n",ach_result_to_string(r));}
 		}
 	else{   assert( sizeof(H_ref) == fs ); }
 
-	r = ach_get( &chan_hubo_ref_filter, &H_ref_filter, sizeof(H_ref_filter), &fs, NULL, ACH_O_LAST );
-	if(ACH_OK != r) {
-		if(hubo_debug) {
-                       	printf("State ini r = %s\n",ach_result_to_string(r));}
-		}
-	else{   
-		assert( sizeof(H_ref_filter) == fs );
-	 }
 
         // time info
         struct timespec t;
@@ -172,7 +157,7 @@ int huboLoop() {
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName, &H_ref_filter, &t);
+	runTraj(fileName, &H_ref, &t);
 
 
 //	runTraj("ybTest1.traj",&H_ref_filter, &t);
@@ -232,7 +217,6 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 // ------------------------------------------------------------------------------
 
 		// Cheeting No more RAP or LAP
-
 /*
 		r->ref[RHP] = 0.0;
 		r->ref[LHP] = 0.0;
@@ -245,8 +229,7 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 		r->ref[RHR] = 0.0;
 		r->ref[LHR] = 0.0;
 */
-
-        	ach_put( &chan_hubo_ref_filter, r, sizeof(*r));
+        	ach_put( &chan_hubo_ref, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
                 t->tv_nsec+=interval;
                 tsnorm(t);
@@ -417,11 +400,6 @@ int main(int argc, char **argv) {
         /* open ach channel */
         int r = ach_open(&chan_hubo_ref, HUBO_CHAN_REF_NAME , NULL);
         assert( ACH_OK == r );
-
-    	/* open ach-filter channel */
-    	r = ach_open(&chan_hubo_ref_filter, HUBO_CHAN_REF_FILTER_NAME , NULL);
-    	assert( ACH_OK == r );
-
  
 	huboLoop();
 //        pause();
