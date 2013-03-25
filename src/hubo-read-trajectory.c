@@ -229,7 +229,7 @@ int runTraj(char* s, int mode, struct hubo_ref *r, struct timespec *t) {
 // ------------------------------------------------------------------------------
 
 		// Cheeting No more RAP or LAP
-
+/*
 		r->ref[RHP] = 0.0;
 		r->ref[LHP] = 0.0;
 		r->ref[RAP] = 0.0;
@@ -240,7 +240,7 @@ int runTraj(char* s, int mode, struct hubo_ref *r, struct timespec *t) {
 		r->ref[LAR] = 0.0;
 		r->ref[RHR] = 0.0;
 		r->ref[LHR] = 0.0;
-
+*/
         	ach_put( &chan_hubo_ref, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
                 t->tv_nsec+=interval;
