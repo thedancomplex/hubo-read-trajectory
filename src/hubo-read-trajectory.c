@@ -46,7 +46,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/mman.h>
 
 // for hubo
-#include "../../hubo-ach/include/hubo.h"
+//#include "../../hubo-ach/include/hubo.h"
+#include <hubo.h>
 
 // for ach
 #include <errno.h>
@@ -127,7 +128,7 @@ ach_channel_t chan_hubo_state;    // hubo-ach-state
 ach_channel_t chan_hubo_param;    // hubo-ach-param
 
 int debug = 0;
-int hubo_debug = 1;
+int16_t hubo_debug = 1;
 int i = 0;
 int huboLoop() {
 	double newRef[2] = {1.0, 0.0};
@@ -232,7 +233,7 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 // ------------------------------------------------------------------------------
 
 		// Cheeting No more RAP or LAP
-
+/*
 		r->ref[RHP] = 0.0;
 		r->ref[LHP] = 0.0;
 		r->ref[RAP] = 0.0;
@@ -243,7 +244,7 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 		r->ref[LAR] = 0.0;
 		r->ref[RHR] = 0.0;
 		r->ref[LHR] = 0.0;
-
+*/
         	ach_put( &chan_hubo_ref_filter, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
                 t->tv_nsec+=interval;
