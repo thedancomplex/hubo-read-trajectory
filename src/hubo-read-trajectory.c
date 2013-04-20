@@ -241,6 +241,9 @@ int runTraj(char* s, int mode, struct hubo_ref *r, struct timespec *t) {
 		r->ref[RHR] = 0.0;
 		r->ref[LHR] = 0.0;
 */
+		for( i = 0 ; i < HUBO_JOINT_COUNT; i++){
+			r->mode[i] = HUBO_REF_MODE_REF;
+		}
         	ach_put( &chan_hubo_ref, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
                 t->tv_nsec+=interval;
