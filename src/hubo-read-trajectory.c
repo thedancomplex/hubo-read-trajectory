@@ -251,6 +251,8 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t, struct hubo_state* 
 		  }
 
 		  goto_init_flag = 0;
+		  clock_gettime(0, t);
+		  // reset clock
 
 		}
 // ------------------------------------------------------------------------------
