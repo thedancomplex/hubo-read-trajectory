@@ -115,7 +115,7 @@ void getMotorPosFrame(int motor, struct can_frame *frame);
 int huboLoop();
 int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
-int runTraj(char* s, struct hubo_ref *r, struct timespec *t);
+int runTraj(char* s, struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state);
 // ach message type
 //typedef struct hubo h[1];
 
@@ -125,6 +125,8 @@ ach_channel_t chan_hubo_ref_filter;      // hubo-ach-filter
 ach_channel_t chan_hubo_init_cmd; // hubo-ach-console
 ach_channel_t chan_hubo_state;    // hubo-ach-state
 ach_channel_t chan_hubo_param;    // hubo-ach-param
+
+int goto_init_flag = 0;
 
 int debug = 0;
 int hubo_debug = 1;
@@ -143,6 +145,18 @@ int huboLoop() {
 		}
 	else{   assert( sizeof(H_ref) == fs ); }
 
+	struct hubo_state H_state;
+	memset( &H_state, 0, sizeof(H_state) );
+	
+	r = ach_get( &chan_hubo_state, &H_state, sizeof(H_state), &fs, NULL, ACH_O_COPY );
+	if (ACH_OK != r) {
+	  if (hubo_debug) { 
+	    printf("State ini r = %s\n", ach_result_to_string(r)); 
+	  }
+	} else {
+	  assert( sizeof(H_state) == fs );
+	}
+
 
         // time info
         struct timespec t;
@@ -157,7 +171,7 @@ int huboLoop() {
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName, &H_ref, &t);
+	runTraj(fileName, &H_ref, &t, &H_state);
 
 
 //	runTraj("ybTest1.traj",&H_ref_filter, &t);
@@ -184,7 +198,7 @@ int huboLoop() {
 }
 
 
-int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
+int runTraj(char* s, struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state) {
 	int i = 0;
 // int interval = 10000000; // 100 hz (0.01 sec)
 
@@ -195,6 +209,7 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 		printf("No Trajectory File!!!\n");
 		return 1;  // exit if not file
 	}
+
 
 //	printf("Reading %s\n",s);
         while(fgets(str,sizeof(str),fp) != NULL) {
@@ -207,11 +222,37 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 // ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
 		int len = strlen(str)-1;
-		if(str[len] == "\n") {
+		if(str[len] == '\n') {
 			str[len] = 0;
 		}
 
 		getArg(str, r); 	
+
+		if (goto_init_flag) {
+
+		  struct hubo_ref tmpref;
+		  int i;
+		  
+		  for (i=0; i<200; ++i) {
+
+		    double u = (double)(i+1)/200;
+		    int joint;
+
+		    for (joint=0; joint<HUBO_JOINT_COUNT; ++joint) {
+
+		      tmpref.ref[joint] = u * r->ref[joint] + (1-u) * H_state->joint[joint].pos;
+
+		    }
+
+		    ach_put( &chan_hubo_ref, &tmpref, sizeof(tmpref));
+
+		    usleep(0.01 * 1e6);		
+
+		  }
+
+		  goto_init_flag = 0;
+
+		}
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
@@ -317,6 +358,9 @@ int main(int argc, char **argv) {
                 if(strcmp(argv[i], "-d") == 0) { // debug
                         debug = 1;
                 }
+		if(strcmp(argv[i], "-i") == 0) {
+		        goto_init_flag = 1;
+		}
                 if(strcmp(argv[i], "-n") == 0) {
 			if( argc > (i+1)) {
 	                        fileName = argv[i+1];
@@ -349,6 +393,7 @@ int main(int argc, char **argv) {
 			printf("Usage: ./hubo-read-trajectory -f 100 -n fileName.traj\n");
 			printf("\tOptions:\n");
 			printf("\t\t-h   help menu\n");
+			printf("\t\t-i   smoothly go to initial state\n");
 			printf("\t\t-n   change trajectory\n");
 			printf("\t\t\t\tdefault: no file\n");
 			printf("\t\t\t\tatguements: filename\n");
@@ -400,6 +445,9 @@ int main(int argc, char **argv) {
         /* open ach channel */
         int r = ach_open(&chan_hubo_ref, HUBO_CHAN_REF_NAME , NULL);
         assert( ACH_OK == r );
+
+	int s = ach_open(&chan_hubo_state, HUBO_CHAN_STATE_NAME, NULL);
+	assert( ACH_OK == s );
  
 	huboLoop();
 //        pause();
