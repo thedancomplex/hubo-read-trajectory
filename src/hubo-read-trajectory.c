@@ -112,10 +112,10 @@ struct timeb {
 void stack_prefault(void);
 static inline void tsnorm(struct timespec *ts);
 void getMotorPosFrame(int motor, struct can_frame *frame);
-int huboLoop();
+int huboLoop(int mode);
 int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
-int runTraj(char* s, struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state);
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state);
 // ach message type
 //typedef struct hubo h[1];
 
@@ -125,17 +125,20 @@ ach_channel_t chan_hubo_ref_filter;      // hubo-ach-filter
 ach_channel_t chan_hubo_init_cmd; // hubo-ach-console
 ach_channel_t chan_hubo_state;    // hubo-ach-state
 ach_channel_t chan_hubo_param;    // hubo-ach-param
+ach_channel_t chan_hubo_from_sim; // ach channel for sim
 
 int goto_init_flag = 0;
 
 int debug = 0;
 int hubo_debug = 1;
 int i = 0;
-int huboLoop() {
+int huboLoop(int mode) {
 	double newRef[2] = {1.0, 0.0};
         // get initial values for hubo
         struct hubo_ref H_ref;
 	memset( &H_ref,   0, sizeof(H_ref));
+        hubo_virtual_t H_virtual;
+        memset( &H_virtual, 0, sizeof(H_virtual));
 
         size_t fs;
 	int r = ach_get( &chan_hubo_ref, &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_COPY );
@@ -171,7 +174,7 @@ int huboLoop() {
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName, &H_ref, &t, &H_state);
+	runTraj(fileName,mode,  &H_ref, &t, &H_state);
 
 
 //	runTraj("ybTest1.traj",&H_ref_filter, &t);
@@ -198,10 +201,14 @@ int huboLoop() {
 }
 
 
-int runTraj(char* s, struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state) {
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state) {
 	int i = 0;
 // int interval = 10000000; // 100 hz (0.01 sec)
 
+        hubo_virtual_t H_virtual;
+        memset( &H_virtual, 0, sizeof(H_virtual));
+        size_t fs;
+        int rr = 0;
  	char str[1000];
 	FILE *fp;		// file pointer
 	fp = fopen(s,"r");
@@ -210,14 +217,20 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t, struct hubo_state* 
 		return 1;  // exit if not file
 	}
 
+        double T = (double)interval/(double)NSEC_PER_SEC;
 
 //	printf("Reading %s\n",s);
+        double id = 0.0;
         while(fgets(str,sizeof(str),fp) != NULL) {
 	//	printf("i = %d\n",i);
 	//	i = i+1;
                 // wait until next shot
                 clock_nanosleep(0,TIMER_ABSTIME,t, NULL);
-
+                if( HUBO_VIRTUAL_MODE_OPENHUBO == mode ){
+                    for( id = 0 ; id < T;  id = id + HUBO_LOOP_PERIOD ){
+                        rr = ach_get( &chan_hubo_from_sim, &H_virtual, sizeof(H_virtual), &fs, NULL, ACH_O_WAIT );
+                    }
+                }
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
@@ -272,6 +285,13 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t, struct hubo_state* 
 		r->ref[RHR] = 0.0;
 		r->ref[LHR] = 0.0;
 */
+
+/*
+		for( i = 0 ; i < HUBO_JOINT_COUNT; i++){
+			r->mode[i] = HUBO_REF_MODE_REF;
+		}
+*/
+
         	ach_put( &chan_hubo_ref, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
                 t->tv_nsec+=interval;
@@ -356,6 +376,7 @@ int main(int argc, char **argv) {
 
 
         int i = 1;
+        int mode = HUBO_VIRTUAL_MODE_NONE;
         while(argc > i) {
                 if(strcmp(argv[i], "-d") == 0) { // debug
                         debug = 1;
@@ -363,6 +384,9 @@ int main(int argc, char **argv) {
 		if(strcmp(argv[i], "-i") == 0) {
 		        goto_init_flag = 1;
 		}
+                if(strcmp(argv[i], "-s") == 0) { // debug
+                        mode = HUBO_VIRTUAL_MODE_OPENHUBO;
+                }
                 if(strcmp(argv[i], "-n") == 0) {
 			if( argc > (i+1)) {
 	                        fileName = argv[i+1];
@@ -443,6 +467,8 @@ int main(int argc, char **argv) {
         /* Pre-fault our stack */
         stack_prefault();
 
+        hubo_virtual_t H_virtual;
+        memset( &H_virtual, 0, sizeof(H_virtual));
 
         /* open ach channel */
         int r = ach_open(&chan_hubo_ref, HUBO_CHAN_REF_NAME , NULL);
@@ -450,8 +476,12 @@ int main(int argc, char **argv) {
 
 	int s = ach_open(&chan_hubo_state, HUBO_CHAN_STATE_NAME, NULL);
 	assert( ACH_OK == s );
+        // open to sim chan
+        r = ach_open(&chan_hubo_from_sim, HUBO_CHAN_VIRTUAL_FROM_SIM_NAME, NULL);
+        assert( ACH_OK == r);
+
  
-	huboLoop();
+	huboLoop(mode);
 //        pause();
         return 0;
 
