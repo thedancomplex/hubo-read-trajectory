@@ -420,6 +420,7 @@ int main(int argc, char **argv) {
 			printf("\tOptions:\n");
 			printf("\t\t-h   help menu\n");
 			printf("\t\t-i   smoothly go to initial state\n");
+			printf("\t\t-s   run trajectory in sim-time mode (waits for simulator trigger)\n");
 			printf("\t\t-n   change trajectory\n");
 			printf("\t\t\t\tdefault: no file\n");
 			printf("\t\t\t\tatguements: filename\n");
