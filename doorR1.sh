@@ -1,1 +1,1 @@
-sudo ./hubo-read-trajectory -f 100 -n dooropen_left.traj.txt
+sudo ./hubo-read-trajectory -i -f 100 -n dooropen_left.traj.txt
