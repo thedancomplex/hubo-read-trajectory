@@ -241,14 +241,15 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
              	}
 
 		while (paused==true){
-			usleep(500000);//0.5seconds
-				if ( read(STDIN_FILENO, &c, 1) == 1) {
-			                if (c=='p') {
-						paused=!paused;
-        			 	}
+			usleep(1000000);//1 second
+			t->tv_sec+=1; // for the 1 sec delay in line above		
+			if ( read(STDIN_FILENO, &c, 1) == 1) {
+		                if (c=='p') {
+					paused=!paused;
+ 					printf("paused is now %s \n", paused ? "true" : "false");    
+	       		 	}
                		 }
-			printf("paused is now %s \n", paused ? "true" : "false");    
-	 	}
+ 		}
 
 
 		int len = strlen(str)-1;
