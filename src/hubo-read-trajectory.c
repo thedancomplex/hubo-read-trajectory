@@ -219,6 +219,7 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 	bool paused=false;
        	tweak_init();
 
+	int line_counter=0;
 
 //	printf("Reading %s\n",s);
         while(fgets(str,sizeof(str),fp) != NULL) {
@@ -226,10 +227,12 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 	//	i = i+1;
                 // wait until next shot
                 clock_nanosleep(0,TIMER_ABSTIME,t, NULL);
-
+		
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
+		line_counter++;
+		printf("line is %d \n", line_counter);
 		if ( read(STDIN_FILENO, &c, 1) == 1) {
         	         if (c=='p') {
 				paused=!paused;
