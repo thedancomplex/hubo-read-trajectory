@@ -232,7 +232,8 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 // ------------------------------------------------------------------------------
 		if ( read(STDIN_FILENO, &c, 1) == 1) {
         	         if (c=='p') {
-			paused=!paused;
+				paused=!paused;
+				printf("paused is now %s \n", paused ? "true" : "false"); 
                 	 }
              	}
 
@@ -241,9 +242,10 @@ int runTraj(char* s, struct hubo_ref *r, struct timespec *t) {
 				if ( read(STDIN_FILENO, &c, 1) == 1) {
 			                if (c=='p') {
 						paused=!paused;
-                			 }
-            		 	}
-		}
+        			 	}
+               		 }
+			printf("paused is now %s \n", paused ? "true" : "false");    
+	 	}
 
 
 		int len = strlen(str)-1;
