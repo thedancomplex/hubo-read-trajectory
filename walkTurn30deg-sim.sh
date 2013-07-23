@@ -1,0 +1,9 @@
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walkReady.traj
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walkReadyOneSecWait.traj
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walk1sDefault0m.csv
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walk1sDefault0m.csv
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walk1sDefault0m.csv
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walk1sDefault0m.csv
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walk1sDefault0m.csv
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/walkReadyOneSecWait.traj
+sudo ./hubo-read-trajectory -s -f 200 -n walking_traj/home.traj
