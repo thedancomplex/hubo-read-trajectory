@@ -293,6 +293,11 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 				r->comply[joint]=1;
 			}
 		}
+		else{
+			for (joint=4; joint<18; joint++){//hard coded for arms only
+				r->comply[joint]=0;
+			}
+		}
 
 		if (goto_init_flag) {
 
