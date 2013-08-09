@@ -60,6 +60,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <inttypes.h>
 #include "ach.h"
 
+// for keyboard
+
+#include <termio.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
+
+
+
 //#include "../include/hubo_ref_filter.h"
 #include "hubo-ref-filter.h"
 
@@ -109,13 +120,22 @@ struct timeb {
 
 
 /* functions */
+// for keyboard
+static void tty_atexit(void);
+static int tty_reset(int);
+static void tweak_init();
+
+static struct termios save_termios;
+static int ttysavefd = -1;
+
+
 void stack_prefault(void);
 static inline void tsnorm(struct timespec *ts);
 void getMotorPosFrame(int motor, struct can_frame *frame);
-int huboLoop(int mode);
+int huboLoop(int mode, bool compliance_mode, bool pause_feature);
 int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state);
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode, bool pause_feature);
 // ach message type
 //typedef struct hubo h[1];
 
@@ -132,7 +152,7 @@ int goto_init_flag = 0;
 int debug = 0;
 int hubo_debug = 1;
 int i = 0;
-int huboLoop(int mode) {
+int huboLoop(int mode, bool compliance_mode, bool pause_feature) {
 	double newRef[2] = {1.0, 0.0};
         // get initial values for hubo
         struct hubo_ref H_ref;
@@ -174,7 +194,7 @@ int huboLoop(int mode) {
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName,mode,  &H_ref, &t, &H_state);
+	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, pause_feature);
 
 
 //	runTraj("ybTest1.traj",&H_ref_filter, &t);
@@ -201,7 +221,7 @@ int huboLoop(int mode) {
 }
 
 
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state) {
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode, bool pause_feature) {
 	int i = 0;
 // int interval = 10000000; // 100 hz (0.01 sec)
 
@@ -216,6 +236,11 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 		printf("No Trajectory File!!!\n");
 		return 1;  // exit if not file
 	}
+	char c;
+	bool paused=false;
+       	tweak_init();
+
+	int line_counter=0;
 
         double T = (double)interval/(double)NSEC_PER_SEC;
 
@@ -226,6 +251,7 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 	//	i = i+1;
                 // wait until next shot
                 clock_nanosleep(0,TIMER_ABSTIME,t, NULL);
+		
                 if( HUBO_VIRTUAL_MODE_OPENHUBO == mode ){
                     for( id = 0 ; id < T;  id = id + HUBO_LOOP_PERIOD ){
                         rr = ach_get( &chan_hubo_from_sim, &H_virtual, sizeof(H_virtual), &fs, NULL, ACH_O_WAIT );
@@ -234,12 +260,45 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
+		line_counter++;
+		printf("line is %d \n", line_counter);
+
+		if ( read(STDIN_FILENO, &c, 1) == 1) {
+        	         if (c=='p' && pause_feature==true) {
+				paused=!paused;
+				printf("paused is now %s \n", paused ? "true" : "false"); 
+                	 }
+             	}
+
+		while (paused==true){
+			usleep(1000000);//1 second
+			t->tv_sec+=1; // for the 1 sec delay in line above		
+			if ( read(STDIN_FILENO, &c, 1) == 1) {
+		                if (c=='p'&& pause_feature==true) {
+					paused=!paused;
+ 					printf("paused is now %s \n", paused ? "true" : "false");    
+	       		 	}
+               		 }
+ 		}
+
+
 		int len = strlen(str)-1;
 		if(str[len] == '\n') {
 			str[len] = 0;
 		}
 
 		getArg(str, r); 	
+		int joint;
+		if (compliance_mode==true){
+			for (joint=4; joint<18; joint++){//hard coded for arms only
+				r->comply[joint]=1;
+			}
+		}
+		else{
+			for (joint=4; joint<18; joint++){//hard coded for arms only
+				r->comply[joint]=0;
+			}
+		}
 
 		if (goto_init_flag) {
 
@@ -249,11 +308,10 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 		  for (i=0; i<200; ++i) {
 
 		    double u = (double)(i+1)/200;
-		    int joint;
 
 		    for (joint=0; joint<HUBO_JOINT_COUNT; ++joint) {
 
-		      tmpref.ref[joint] = u * r->ref[joint] + (1-u) * H_state->joint[joint].pos;
+		      tmpref.ref[joint] = u * r->ref[joint] + (1-u) * H_state->joint[joint].ref;
 
 		    }
 
@@ -374,7 +432,8 @@ int main(int argc, char **argv) {
         int vflag = 0;
         int c;
 
-
+	bool compliance_mode=false;
+	bool enable_pause_feature=false;
         int i = 1;
         int mode = HUBO_VIRTUAL_MODE_NONE;
         while(argc > i) {
@@ -387,6 +446,12 @@ int main(int argc, char **argv) {
                 if(strcmp(argv[i], "-s") == 0) { // debug
                         mode = HUBO_VIRTUAL_MODE_OPENHUBO;
                 }
+                if(strcmp(argv[i], "-c") == 0) { // debug
+                	compliance_mode=true;
+		}
+		if(strcmp(argv[i], "-p") == 0){
+			enable_pause_feature=true;
+		}
                 if(strcmp(argv[i], "-n") == 0) {
 			if( argc > (i+1)) {
 	                        fileName = argv[i+1];
@@ -482,8 +547,74 @@ int main(int argc, char **argv) {
         assert( ACH_OK == r);
 
  
-	huboLoop(mode);
+	huboLoop(mode, compliance_mode, enable_pause_feature);
 //        pause();
         return 0;
 
+}
+
+
+
+// KEyboard Input
+
+static int
+tty_unbuffered(int fd) /* put terminal into a raw mode */
+{
+    struct termios buf;
+
+    if (tcgetattr(fd, &buf) < 0)
+        return(-1);
+
+    save_termios = buf; /* structure copy */
+
+    /* echo off, canonical mode off */
+    buf.c_lflag &= ~(ECHO | ICANON);
+
+    /* 1 byte at a time, no timer */
+    buf.c_cc[VMIN] = 1;
+    buf.c_cc[VTIME] = 0;
+    if (tcsetattr(fd, TCSAFLUSH, &buf) < 0)
+        return(-1);
+
+    ttysavefd = fd;
+    return(0);
+}
+
+static int
+tty_reset(int fd) /* restore terminal's mode */
+{
+    if (tcsetattr(fd, TCSAFLUSH, &save_termios) < 0)
+        return(-1);
+    return(0);
+}
+
+static void
+tty_atexit(void) /* can be set up by atexit(tty_atexit) */
+{
+    if (ttysavefd >= 0)
+        tty_reset(ttysavefd);
+}
+
+static void
+tweak_init()
+{
+   /* make stdin unbuffered */
+    if (tty_unbuffered(STDIN_FILENO) < 0) {
+        printf("Set tty unbuffered error");// << std::endl;
+        //std::cout << "Set tty unbuffered error" << std::endl;
+        exit(1);
+    }
+
+    atexit(tty_atexit);
+
+    /* nonblock I/O */
+    int flags;
+    if ( (flags = fcntl(STDIN_FILENO, F_GETFL, 0)) == 1) {
+        perror("fcntl get flag error");
+        exit(1);
+    }
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl set flag error");
+        exit(1);
+    }
 }
