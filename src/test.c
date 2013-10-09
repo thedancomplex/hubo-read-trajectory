@@ -2,7 +2,7 @@
 
 
 int main(){
-  int mode=0;
+  int mode=1;
   bool compliance=false;
   bool pause=false;
 

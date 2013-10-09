@@ -132,10 +132,10 @@ static int ttysavefd = -1;
 void stack_prefault(void);
 static inline void tsnorm(struct timespec *ts);
 void getMotorPosFrame(int motor, struct can_frame *frame);
-int huboLoop(int mode, bool compliance_mode, bool pause_feature);
+int huboLoop(int mode, bool compliance_mode, bool left_compliance_mode, bool right_compliance_mode, bool pause_feature);
 int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode, bool pause_feature);
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature);
 // ach message type
 //typedef struct hubo h[1];
 
@@ -152,7 +152,7 @@ int goto_init_flag = 0;
 int debug = 0;
 int hubo_debug = 1;
 int i = 0;
-int huboLoop(int mode, bool compliance_mode, bool pause_feature) {
+int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature) {
 	double newRef[2] = {1.0, 0.0};
         // get initial values for hubo
         struct hubo_ref H_ref;
@@ -194,7 +194,7 @@ int huboLoop(int mode, bool compliance_mode, bool pause_feature) {
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, pause_feature);
+	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, left_compliance_mode, right_compliance_mode, pause_feature);
 
 
 //	runTraj("ybTest1.traj",&H_ref_filter, &t);
@@ -221,7 +221,7 @@ int huboLoop(int mode, bool compliance_mode, bool pause_feature) {
 }
 
 
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode, bool pause_feature) {
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature) {
 	int i = 0;
 // int interval = 10000000; // 100 hz (0.01 sec)
 
@@ -299,7 +299,17 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 				r->comply[joint]=0;
 			}
 		}
-
+		if (left_compliance_mode==true){
+			for (joint=4; joint<11; joint++){//hard coded for arms only
+				r->comply[joint]=1;
+			}
+		}
+		if (right_compliance_mode==true){
+			for (joint=11; joint<18; joint++){//hard coded for arms only
+				r->comply[joint]=1;
+			}
+		}
+		
 		if (goto_init_flag) {
 
 		  struct hubo_ref tmpref;
@@ -433,6 +443,8 @@ int main(int argc, char **argv) {
         int c;
 
 	bool compliance_mode=false;
+	bool left_compliance_mode=false;
+	bool right_compliance_mode=false;
 	bool enable_pause_feature=false;
         int i = 1;
         int mode = HUBO_VIRTUAL_MODE_NONE;
@@ -448,6 +460,12 @@ int main(int argc, char **argv) {
                 }
                 if(strcmp(argv[i], "-c") == 0) { // debug
                 	compliance_mode=true;
+		}
+	        if(strcmp(argv[i], "-cl") == 0) { // debug
+                	left_compliance_mode=true;
+		}
+	        if(strcmp(argv[i], "-cr") == 0) { // debug
+                	right_compliance_mode=true;
 		}
 		if(strcmp(argv[i], "-p") == 0){
 			enable_pause_feature=true;
@@ -547,7 +565,7 @@ int main(int argc, char **argv) {
         assert( ACH_OK == r);
 
  
-	huboLoop(mode, compliance_mode, enable_pause_feature);
+	huboLoop(mode, compliance_mode, left_compliance_mode, right_compliance_mode, enable_pause_feature);
 //        pause();
         return 0;
 

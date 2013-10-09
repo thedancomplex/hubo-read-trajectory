@@ -137,6 +137,7 @@ int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
 int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode, bool pause_feature);
 int runTrajFunction(char* s, int mode,  bool compliance_mode, bool pause_feature);
+double* getEncoderValues();
 // ach message type
 //typedef struct hubo h[1];
 
@@ -343,9 +344,64 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
         }
 
 }
+double* getEncoderValues(){
+	static double encoderValues[40];
+	struct hubo_state H_state;
+	size_t fs;
+	int r= ach_get( &chan_hubo_state, &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
+	if(hubo_debug) {
+		printf("State ini r = %s\n",ach_result_to_string(r));
+	}
+	else{
+		assert( sizeof(H_state) == fs );
+	}
 
+	 encoderValues[0]=H_state.joint[RHY].pos; 
+	 encoderValues[1]=H_state.joint[RHR].pos; 
+	 encoderValues[2]=H_state.joint[RHP].pos;
+	 encoderValues[3]=H_state.joint[RKN].pos; 
+	 encoderValues[4]=H_state.joint[RAP].pos; 
+	 encoderValues[5]=H_state.joint[RAR].pos; 
+	 encoderValues[6]=H_state.joint[LHY].pos; 
+	 encoderValues[7]=H_state.joint[LHR].pos; 
+	 encoderValues[8]=H_state.joint[LHP].pos; 
+	 encoderValues[9]=H_state.joint[LKN].pos; 
+	 encoderValues[10]=H_state.joint[LAP].pos; 
+	 encoderValues[11]=H_state.joint[LAR].pos; 
+	 encoderValues[12]=H_state.joint[RSP].pos; 
+	 encoderValues[13]=H_state.joint[RSR].pos; 
+	 encoderValues[14]=H_state.joint[RSY].pos; 
+	 encoderValues[15]=H_state.joint[REB].pos; 
+	 encoderValues[16]=H_state.joint[RWY].pos; 
+	 encoderValues[17]=H_state.joint[RWR].pos; 
+	 encoderValues[18]=H_state.joint[RWP].pos; 
+	 encoderValues[19]=H_state.joint[LSP].pos; 
+	 encoderValues[20]=H_state.joint[LSR].pos; 
+	 encoderValues[21]=H_state.joint[LSY].pos; 
+	 encoderValues[22]=H_state.joint[LEB].pos; 
+	 encoderValues[23]=H_state.joint[LWY].pos; 
+	 encoderValues[24]=H_state.joint[LWR].pos; 
+	 encoderValues[25]=H_state.joint[LWP].pos; 
+	 encoderValues[26]=H_state.joint[NKY].pos; 
+	 encoderValues[27]=H_state.joint[NK1].pos; 
+	 encoderValues[28]=H_state.joint[NK2].pos;
+	 encoderValues[29]=H_state.joint[WST].pos; 
+	 return encoderValues;
+	
+}
 
 int runTrajFunction(char* s, int mode,  bool compliance_mode, bool pause_feature) {
+        /* open ach channel */
+        int t1 = ach_open(&chan_hubo_ref, HUBO_CHAN_REF_NAME , NULL);
+        assert( ACH_OK == t1);
+
+        int t2 = ach_open(&chan_hubo_state, HUBO_CHAN_STATE_NAME, NULL);
+        assert( ACH_OK == t2);
+        // open to sim chan
+        t1 = ach_open(&chan_hubo_from_sim, HUBO_CHAN_VIRTUAL_FROM_SIM_NAME, NULL);
+        assert( ACH_OK == t1);
+
+
 	printf("into the func \n");
 
         double newRef[2] = {1.0, 0.0};
@@ -396,7 +452,7 @@ int runTrajFunction(char* s, int mode,  bool compliance_mode, bool pause_feature
 
 //      char* fileName = "valve0.traj";
 	printf("getting into trajectory \n");
-        runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, pause_feature);
+        runTraj(s,mode,  &H_ref, &t, &H_state, compliance_mode, pause_feature);
 
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
@@ -541,4 +597,9 @@ tweak_init()
         perror("fcntl set flag error");
         exit(1);
     }
+}
+
+
+int main(){
+
 }
