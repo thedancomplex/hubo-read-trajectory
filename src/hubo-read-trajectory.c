@@ -132,10 +132,10 @@ static int ttysavefd = -1;
 void stack_prefault(void);
 static inline void tsnorm(struct timespec *ts);
 void getMotorPosFrame(int motor, struct can_frame *frame);
-int huboLoop(int mode, bool compliance_mode, bool left_compliance_mode, bool right_compliance_mode, bool pause_feature);
+int huboLoop(int mode, bool compliance_mode, bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter);
 int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature);
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter);
 // ach message type
 //typedef struct hubo h[1];
 
@@ -152,7 +152,7 @@ int goto_init_flag = 0;
 int debug = 0;
 int hubo_debug = 1;
 int i = 0;
-int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature) {
+int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter) {
 	double newRef[2] = {1.0, 0.0};
         // get initial values for hubo
         struct hubo_ref H_ref;
@@ -194,7 +194,7 @@ int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool ri
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, left_compliance_mode, right_compliance_mode, pause_feature);
+	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, left_compliance_mode, right_compliance_mode, pause_feature, no_filter);
 
 
 //	runTraj("ybTest1.traj",&H_ref_filter, &t);
@@ -221,7 +221,7 @@ int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool ri
 }
 
 
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature) {
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter) {
 	int i = 0;
 // int interval = 10000000; // 100 hz (0.01 sec)
 
@@ -354,11 +354,14 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 		r->ref[LHR] = 0.0;
 */
 
-/*
 		for( i = 0 ; i < HUBO_JOINT_COUNT; i++){
-			r->mode[i] = HUBO_REF_MODE_REF;
+			if (no_filter==true){
+				r->mode[i] = HUBO_REF_MODE_REF;
+			}
+			else{
+				r->mode[i] = HUBO_REF_MODE_REF_FILTER;
+			}
 		}
-*/
 
         	ach_put( &chan_hubo_ref, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
@@ -446,6 +449,7 @@ int main(int argc, char **argv) {
 	bool left_compliance_mode=false;
 	bool right_compliance_mode=false;
 	bool enable_pause_feature=false;
+	bool no_filter=false;
         int i = 1;
         int mode = HUBO_VIRTUAL_MODE_NONE;
         while(argc > i) {
@@ -461,10 +465,13 @@ int main(int argc, char **argv) {
                 if(strcmp(argv[i], "-c") == 0) { // debug
                 	compliance_mode=true;
 		}
+	        if(strcmp(argv[i], "-nf") == 0) { // debug
+                	no_filter=true;
+		} 
 	        if(strcmp(argv[i], "-cl") == 0) { // debug
                 	left_compliance_mode=true;
 		}
-	        if(strcmp(argv[i], "-cr") == 0) { // debug
+		if(strcmp(argv[i], "-cr") == 0) { // debug
                 	right_compliance_mode=true;
 		}
 		if(strcmp(argv[i], "-p") == 0){
@@ -565,7 +572,7 @@ int main(int argc, char **argv) {
         assert( ACH_OK == r);
 
  
-	huboLoop(mode, compliance_mode, left_compliance_mode, right_compliance_mode, enable_pause_feature);
+	huboLoop(mode, compliance_mode, left_compliance_mode, right_compliance_mode, enable_pause_feature, no_filter);
 //        pause();
         return 0;
 
