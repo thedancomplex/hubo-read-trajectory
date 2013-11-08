@@ -132,10 +132,10 @@ static int ttysavefd = -1;
 void stack_prefault(void);
 static inline void tsnorm(struct timespec *ts);
 void getMotorPosFrame(int motor, struct can_frame *frame);
-int huboLoop(int mode, bool compliance_mode, bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter);
+int huboLoop(int mode, bool compliance_mode, bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line);
 int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter);
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line);
 // ach message type
 //typedef struct hubo h[1];
 
@@ -152,7 +152,7 @@ int goto_init_flag = 0;
 int debug = 0;
 int hubo_debug = 1;
 int i = 0;
-int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter) {
+int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line) {
 	double newRef[2] = {1.0, 0.0};
         // get initial values for hubo
         struct hubo_ref H_ref;
@@ -194,7 +194,7 @@ int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool ri
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, left_compliance_mode, right_compliance_mode, pause_feature, no_filter);
+	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, left_compliance_mode, right_compliance_mode, pause_feature, no_filter, start_line);
 
 
 //	runTraj("ybTest1.traj",&H_ref_filter, &t);
@@ -221,7 +221,7 @@ int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool ri
 }
 
 
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter) {
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line) {
 	int i = 0;
 // int interval = 10000000; // 100 hz (0.01 sec)
 
@@ -246,7 +246,13 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 
 //	printf("Reading %s\n",s);
         double id = 0.0;
-        while(fgets(str,sizeof(str),fp) != NULL) {
+ 	while ((line_counter+1)<start_line){
+		fgets(str,sizeof(str),fp);
+		line_counter++;
+		printf("skipped line %d \n", line_counter);
+	}
+
+       while(fgets(str,sizeof(str),fp) != NULL) {
 	//	printf("i = %d\n",i);
 	//	i = i+1;
                 // wait until next shot
@@ -260,9 +266,14 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
+		if ( read(STDIN_FILENO, &c, 1) == 1) {
+        	        if (c=='e') {
+                		return 0; 
+			}
+             	}
+
 		line_counter++;
 		printf("line is %d \n", line_counter);
-
 		if ( read(STDIN_FILENO, &c, 1) == 1) {
         	         if (c=='p' && pause_feature==true) {
 				paused=!paused;
@@ -444,7 +455,7 @@ int main(int argc, char **argv) {
 
         int vflag = 0;
         int c;
-
+	int start_line=0;
 	bool compliance_mode=false;
 	bool left_compliance_mode=false;
 	bool right_compliance_mode=false;
@@ -500,6 +511,11 @@ int main(int argc, char **argv) {
 			else {
 				printf("ERROR: Frequency not changed\n");
 			}
+		}
+		if(strcmp(argv[i], "-line") == 0) {
+			int j = i+1;
+			printf("start line is %d", atoi(argv[j]));	
+			start_line=atoi(argv[j]);
 		}
 		if(strcmp(argv[i], "-h") == 0) {
                 	printf("------------------------------------------\n");
@@ -572,7 +588,7 @@ int main(int argc, char **argv) {
         assert( ACH_OK == r);
 
  
-	huboLoop(mode, compliance_mode, left_compliance_mode, right_compliance_mode, enable_pause_feature, no_filter);
+	huboLoop(mode, compliance_mode, left_compliance_mode, right_compliance_mode, enable_pause_feature, no_filter, start_line);
 //        pause();
         return 0;
 
