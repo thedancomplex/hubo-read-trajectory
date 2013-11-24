@@ -132,10 +132,12 @@ static int ttysavefd = -1;
 void stack_prefault(void);
 static inline void tsnorm(struct timespec *ts);
 void getMotorPosFrame(int motor, struct can_frame *frame);
-int huboLoop(int mode, bool compliance_mode, bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line);
+int huboLoop(int mode, bool compliance_mode, bool pause_feature);
 int ftime(struct timeb *tp);
 int getArg(char* s,struct hubo_ref *r);
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line);
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode, bool pause_feature);
+int runTrajFunction(char* s, int mode,  bool compliance_mode, bool pause_feature);
+double* getEncoderValues();
 // ach message type
 //typedef struct hubo h[1];
 
@@ -152,7 +154,7 @@ int goto_init_flag = 0;
 int debug = 0;
 int hubo_debug = 1;
 int i = 0;
-int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line) {
+int huboLoop(int mode, bool compliance_mode, bool pause_feature) {
 	double newRef[2] = {1.0, 0.0};
         // get initial values for hubo
         struct hubo_ref H_ref;
@@ -194,23 +196,8 @@ int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool ri
 
 //	char* fileName = "valve0.traj";
 
-	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, left_compliance_mode, right_compliance_mode, pause_feature, no_filter, start_line);
+	runTraj(fileName,mode,  &H_ref, &t, &H_state, compliance_mode, pause_feature);
 
-
-//	runTraj("ybTest1.traj",&H_ref_filter, &t);
-
-//	runTraj("valve0.traj", &H_ref_filter, &t);
-//	runTraj("valve1.traj", &H_ref_filter, &t);
-//	runTraj("valve2.traj", &H_ref_filter, &t);
-//	runTraj("valve1.traj", &H_ref_filter, &t);
-//	runTraj("valve2.traj", &H_ref_filter, &t);
-//	runTraj("valve1.traj", &H_ref_filter, &t);
-//	runTraj("valve2.traj", &H_ref_filter, &t);
-//	runTraj("valve1.traj", &H_ref_filter, &t);
-//	runTraj("valve2.traj", &H_ref_filter, &t);
-//	runTraj("valve1.traj", &H_ref_filter, &t);
-//	runTraj("valve2.traj", &H_ref_filter, &t);
-//	runTraj("valve3.traj", &H_ref_filter, &t);
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
@@ -221,7 +208,7 @@ int huboLoop(int mode, bool compliance_mode,  bool left_compliance_mode, bool ri
 }
 
 
-int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode,  bool left_compliance_mode, bool right_compliance_mode, bool pause_feature, bool no_filter, int start_line) {
+int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct hubo_state* H_state, bool compliance_mode, bool pause_feature) {
 	int i = 0;
 // int interval = 10000000; // 100 hz (0.01 sec)
 
@@ -246,13 +233,7 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 
 //	printf("Reading %s\n",s);
         double id = 0.0;
- 	while ((line_counter+1)<start_line){
-		fgets(str,sizeof(str),fp);
-		line_counter++;
-		printf("skipped line %d \n", line_counter);
-	}
-
-       while(fgets(str,sizeof(str),fp) != NULL) {
+        while(fgets(str,sizeof(str),fp) != NULL) {
 	//	printf("i = %d\n",i);
 	//	i = i+1;
                 // wait until next shot
@@ -266,14 +247,9 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 // ------------------------------------------------------------------------------
 // ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
 // ------------------------------------------------------------------------------
-		if ( read(STDIN_FILENO, &c, 1) == 1) {
-        	        if (c=='e') {
-                		return 0; 
-			}
-             	}
-
 		line_counter++;
 		printf("line is %d \n", line_counter);
+
 		if ( read(STDIN_FILENO, &c, 1) == 1) {
         	         if (c=='p' && pause_feature==true) {
 				paused=!paused;
@@ -310,17 +286,7 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 				r->comply[joint]=0;
 			}
 		}
-		if (left_compliance_mode==true){
-			for (joint=4; joint<11; joint++){//hard coded for arms only
-				r->comply[joint]=1;
-			}
-		}
-		if (right_compliance_mode==true){
-			for (joint=11; joint<18; joint++){//hard coded for arms only
-				r->comply[joint]=1;
-			}
-		}
-		
+
 		if (goto_init_flag) {
 
 		  struct hubo_ref tmpref;
@@ -365,14 +331,11 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
 		r->ref[LHR] = 0.0;
 */
 
+/*
 		for( i = 0 ; i < HUBO_JOINT_COUNT; i++){
-			if (no_filter==true){
-				r->mode[i] = HUBO_REF_MODE_REF;
-			}
-			else{
-				r->mode[i] = HUBO_REF_MODE_REF_FILTER;
-			}
+			r->mode[i] = HUBO_REF_MODE_REF;
 		}
+*/
 
         	ach_put( &chan_hubo_ref, r, sizeof(*r));
 		//printf("Ref r = %s\n",ach_result_to_string(r));
@@ -381,6 +344,127 @@ int runTraj(char* s, int mode,  struct hubo_ref *r, struct timespec *t, struct h
         }
 
 }
+double* getEncoderValues(){
+	static double encoderValues[40];
+	struct hubo_state H_state;
+	size_t fs;
+	int r= ach_get( &chan_hubo_state, &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
+	if(hubo_debug) {
+		printf("State ini r = %s\n",ach_result_to_string(r));
+	}
+	else{
+		assert( sizeof(H_state) == fs );
+	}
+
+	 encoderValues[0]=H_state.joint[RHY].pos; 
+	 encoderValues[1]=H_state.joint[RHR].pos; 
+	 encoderValues[2]=H_state.joint[RHP].pos;
+	 encoderValues[3]=H_state.joint[RKN].pos; 
+	 encoderValues[4]=H_state.joint[RAP].pos; 
+	 encoderValues[5]=H_state.joint[RAR].pos; 
+	 encoderValues[6]=H_state.joint[LHY].pos; 
+	 encoderValues[7]=H_state.joint[LHR].pos; 
+	 encoderValues[8]=H_state.joint[LHP].pos; 
+	 encoderValues[9]=H_state.joint[LKN].pos; 
+	 encoderValues[10]=H_state.joint[LAP].pos; 
+	 encoderValues[11]=H_state.joint[LAR].pos; 
+	 encoderValues[12]=H_state.joint[RSP].pos; 
+	 encoderValues[13]=H_state.joint[RSR].pos; 
+	 encoderValues[14]=H_state.joint[RSY].pos; 
+	 encoderValues[15]=H_state.joint[REB].pos; 
+	 encoderValues[16]=H_state.joint[RWY].pos; 
+	 encoderValues[17]=H_state.joint[RWR].pos; 
+	 encoderValues[18]=H_state.joint[RWP].pos; 
+	 encoderValues[19]=H_state.joint[LSP].pos; 
+	 encoderValues[20]=H_state.joint[LSR].pos; 
+	 encoderValues[21]=H_state.joint[LSY].pos; 
+	 encoderValues[22]=H_state.joint[LEB].pos; 
+	 encoderValues[23]=H_state.joint[LWY].pos; 
+	 encoderValues[24]=H_state.joint[LWR].pos; 
+	 encoderValues[25]=H_state.joint[LWP].pos; 
+	 encoderValues[26]=H_state.joint[NKY].pos; 
+	 encoderValues[27]=H_state.joint[NK1].pos; 
+	 encoderValues[28]=H_state.joint[NK2].pos;
+	 encoderValues[29]=H_state.joint[WST].pos; 
+	 return encoderValues;
+	
+}
+
+int runTrajFunction(char* s, int mode,  bool compliance_mode, bool pause_feature) {
+        /* open ach channel */
+        int t1 = ach_open(&chan_hubo_ref, HUBO_CHAN_REF_NAME , NULL);
+        assert( ACH_OK == t1);
+
+        int t2 = ach_open(&chan_hubo_state, HUBO_CHAN_STATE_NAME, NULL);
+        assert( ACH_OK == t2);
+        // open to sim chan
+        t1 = ach_open(&chan_hubo_from_sim, HUBO_CHAN_VIRTUAL_FROM_SIM_NAME, NULL);
+        assert( ACH_OK == t1);
+
+
+	printf("into the func \n");
+
+        double newRef[2] = {1.0, 0.0};
+        // get initial values for hubo
+        struct hubo_ref H_ref;
+        memset( &H_ref,   0, sizeof(H_ref));
+        hubo_virtual_t H_virtual;
+        memset( &H_virtual, 0, sizeof(H_virtual));
+
+	printf("after creating \n");
+	fflush(stdout);
+        size_t fs;
+        int r = ach_get( &chan_hubo_ref, &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_COPY );
+	printf("after r \n");
+	fflush(stdout);
+
+        if(ACH_OK != r) {
+                if(hubo_debug) {
+                        printf("Ref ini r = %s\n",ach_result_to_string(r));}
+                }
+        else{   assert( sizeof(H_ref) == fs ); }
+
+	printf("after achget \n");
+	fflush(stdout);
+        struct hubo_state H_state;
+        memset( &H_state, 0, sizeof(H_state) );
+
+        r = ach_get( &chan_hubo_state, &H_state, sizeof(H_state), &fs, NULL, ACH_O_COPY );
+        if (ACH_OK != r) {
+          if (hubo_debug) {
+            printf("State ini r = %s\n", ach_result_to_string(r));
+          }
+        } else {
+          assert( sizeof(H_state) == fs );
+        }
+	printf("after ach \n");
+
+        // time info
+        struct timespec t;
+
+
+        /* Sampling Period */
+        double T = (double)interval/(double)NSEC_PER_SEC; // (sec)
+        clock_gettime( 0,&t);
+// ------------------------------------------------------------------------------
+// ---------------[ DO NOT EDIT AVBOE THIS LINE]---------------------------------
+// ------------------------------------------------------------------------------
+
+//      char* fileName = "valve0.traj";
+	printf("getting into trajectory \n");
+        runTraj(s,mode,  &H_ref, &t, &H_state, compliance_mode, pause_feature);
+
+// ------------------------------------------------------------------------------
+// ---------------[ DO NOT EDIT BELOW THIS LINE]---------------------------------
+// ------------------------------------------------------------------------------
+
+
+        printf("Trajectory Finished\n");
+        return 0;
+
+
+}
+
 
 int  getArg(char* s,struct hubo_ref *r) {
 
@@ -432,7 +516,6 @@ sscanf(s, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %
 
 
 
-
 void stack_prefault(void) {
         unsigned char dummy[MAX_SAFE_STACK];
         memset( dummy, 0, MAX_SAFE_STACK );
@@ -450,150 +533,6 @@ static inline void tsnorm(struct timespec *ts){
                 ts->tv_sec++;
         }
 }
-
-int main(int argc, char **argv) {
-
-        int vflag = 0;
-        int c;
-	int start_line=0;
-	bool compliance_mode=false;
-	bool left_compliance_mode=false;
-	bool right_compliance_mode=false;
-	bool enable_pause_feature=false;
-	bool no_filter=false;
-        int i = 1;
-        int mode = HUBO_VIRTUAL_MODE_NONE;
-        while(argc > i) {
-                if(strcmp(argv[i], "-d") == 0) { // debug
-                        debug = 1;
-                }
-		if(strcmp(argv[i], "-i") == 0) {
-		        goto_init_flag = 1;
-		}
-                if(strcmp(argv[i], "-s") == 0) { // debug
-                        mode = HUBO_VIRTUAL_MODE_OPENHUBO;
-                }
-                if(strcmp(argv[i], "-c") == 0) { // debug
-                	compliance_mode=true;
-		}
-	        if(strcmp(argv[i], "-nf") == 0) { // debug
-                	no_filter=true;
-		} 
-	        if(strcmp(argv[i], "-cl") == 0) { // debug
-                	left_compliance_mode=true;
-		}
-		if(strcmp(argv[i], "-cr") == 0) { // debug
-                	right_compliance_mode=true;
-		}
-		if(strcmp(argv[i], "-p") == 0){
-			enable_pause_feature=true;
-		}
-                if(strcmp(argv[i], "-n") == 0) {
-			if( argc > (i+1)) {
-	                        fileName = argv[i+1];
-				printf("Trejectory file changed\n");
-			}
-			else {
-				printf("ERROR: File name not changed\n");
-			}
-                }
-		if(strcmp(argv[i], "-f") == 0) {
-			int j = i+1;
-			if( argc > (j)) {
-				if(strcmp(argv[j],      "100") == 0) { interval = 10000000; /* 100 hz (0.01 sec) */ }
-				else if(strcmp(argv[j], "50") == 0)  { interval = 20000000; /* 50 hz (0.02 sec)  */ }
-				else if(strcmp(argv[j], "25") == 0)  { interval = 40000000; /* 25 hz (0.04 sec)  */ }
-				else if(strcmp(argv[j], "10") == 0)  { interval = 100000000; /* 25 hz (0.04 sec)  */}
-				else if(strcmp(argv[j], "200") == 0) { interval = 5000000;  /* 200 hz (0.005 sec)*/ }
-				else if(strcmp(argv[j], "500") == 0) { interval = 2000000;  /* 500 hz (0.002 sec)*/ }
-				else { printf("ERROR: Frequency not changed\n"); }
-			}
-			else {
-				printf("ERROR: Frequency not changed\n");
-			}
-		}
-		if(strcmp(argv[i], "-line") == 0) {
-			int j = i+1;
-			printf("start line is %d", atoi(argv[j]));	
-			start_line=atoi(argv[j]);
-		}
-		if(strcmp(argv[i], "-h") == 0) {
-                	printf("------------------------------------------\n");
-                	printf("-----------hubo-read-trajectory-----------\n");
-                	printf("------------------------------------------\n");
-			printf("\n");
-			printf("Usage: ./hubo-read-trajectory -f 100 -n fileName.traj\n");
-			printf("\tOptions:\n");
-			printf("\t\t-h   help menu\n");
-			printf("\t\t-i   smoothly go to initial state\n");
-			printf("\t\t-s   run trajectory in sim-time mode (waits for simulator trigger)\n");
-			printf("\t\t-n   change trajectory\n");
-			printf("\t\t\t\tdefault: no file\n");
-			printf("\t\t\t\tatguements: filename\n");
-			printf("\t\t-f   change frequency\n");
-			printf("\t\t\tdefault: 25hz\n");
-			printf("\t\t\tatguements: frequency\n");
-			printf("\t\t\t\toptions (hz):\n");
-			printf("\t\t\t\t\t10\n");
-			printf("\t\t\t\t\t25\n");
-			printf("\t\t\t\t\t50\n");
-			printf("\t\t\t\t\t100\n");
-			printf("\t\t\t\t\t200\n");
-			printf("\t\t\t\t\t500\n");
-			printf("\n");
-			printf("File format (Each Column)\n");
-			printf("\tRHY RHR RHP RKN RAP RAR LHY LHR LHP LKN LAP LAR RSP RSR RSY REB RWY RWR RWP LSP LSR LSY LEB LWY LWR LWP NKY NK1 NK2 WST RF1 RF2 RF3 RF4 RF5 LF1 LF2 LF3 LF4 LF5\n");
-			printf("\n");
-			return 0;
-		}
-		i++;
-        }
-	
-
-	printf("\n");
-	printf("-----------------------------\n");
-	printf("Using file: %s \n",fileName);
-	printf("Sampling frequency %f\n", 1/((double)interval/(double)NSEC_PER_SEC));
-	printf("-----------------------------\n");
-	printf("\n");
-        /* RT */
-        struct sched_param param;
-        /* Declare ourself as a real time task */
-        param.sched_priority = MY_PRIORITY;
-        if(sched_setscheduler(0, SCHED_FIFO, &param) == -1) {
-                perror("sched_setscheduler failed");
-                exit(-1);
-        }
-
-        /* Lock memory */
-        if(mlockall(MCL_CURRENT|MCL_FUTURE) == -1) {
-                perror("mlockall failed");
-                exit(-2);
-        }
-
-        /* Pre-fault our stack */
-        stack_prefault();
-
-        hubo_virtual_t H_virtual;
-        memset( &H_virtual, 0, sizeof(H_virtual));
-
-        /* open ach channel */
-        int r = ach_open(&chan_hubo_ref, HUBO_CHAN_REF_NAME , NULL);
-        assert( ACH_OK == r );
-
-	int s = ach_open(&chan_hubo_state, HUBO_CHAN_STATE_NAME, NULL);
-	assert( ACH_OK == s );
-        // open to sim chan
-        r = ach_open(&chan_hubo_from_sim, HUBO_CHAN_VIRTUAL_FROM_SIM_NAME, NULL);
-        assert( ACH_OK == r);
-
- 
-	huboLoop(mode, compliance_mode, left_compliance_mode, right_compliance_mode, enable_pause_feature, no_filter, start_line);
-//        pause();
-        return 0;
-
-}
-
 
 
 // KEyboard Input
@@ -658,4 +597,9 @@ tweak_init()
         perror("fcntl set flag error");
         exit(1);
     }
+}
+
+
+int main(){
+
 }
